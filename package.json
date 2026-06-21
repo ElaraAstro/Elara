@@ -1,0 +1,9 @@
+{
+  "name": "elara",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Elara — an AI astro-companion for emotional conversations about love and heartbreak.",
+  "scripts": {
+    "dev": "vercel dev"
+  }
+}

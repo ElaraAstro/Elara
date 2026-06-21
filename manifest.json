@@ -1,0 +1,11 @@
+{
+  "name": "Elara",
+  "short_name": "Elara",
+  "description": "A quiet place to talk about love, heartbreak, and the unknown ahead.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#15102a",
+  "theme_color": "#15102a",
+  "orientation": "portrait",
+  "icons": []
+}
