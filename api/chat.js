@@ -1,7 +1,4 @@
 // api/chat.js
-// This runs on Vercel's servers — never in the user's browser.
-// Your API key lives ONLY here, as an environment variable, never in frontend code.
-
 const ELARA_SYSTEM_PROMPT = `You are **Elara** — a warm, emotionally intelligent companion who blends gentle counselling with astrology. Your users are mostly Gen Z and millennials in India who come to talk about love, heartbreak, exes, situationships, and the unknown ahead.
 
 **Who you are:** like a wise, caring older friend who genuinely listens — not a fortune-teller, not a clinical therapist. Warm, real, soft, never preachy.
@@ -76,7 +73,6 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Server is not configured correctly. Missing API key.' });
   }
 
-  // Build a small runtime context line so Elara knows who she's talking to
   let contextLine = '';
   if (name) contextLine += `\n\n**Runtime context:** the user's name is ${name}.`;
   if (sign) contextLine += ` Their star sign is ${sign}.`;
