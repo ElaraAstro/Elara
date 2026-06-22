@@ -6,5 +6,8 @@
   "description": "Elara astro-companion",
   "scripts": {
     "dev": "vercel dev"
+  },
+  "dependencies": {
+    "astronomia": "^4.2.0"
   }
 }
