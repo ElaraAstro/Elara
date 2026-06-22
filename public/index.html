@@ -128,6 +128,11 @@
   #sendBtn { flex-shrink: 0; width: 46px; height: 46px; border-radius: 50%; border: none; background: var(--primary); color: #161229; font-size: 19px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform .15s; }
   #sendBtn:active { transform: scale(0.9); }
   #sendBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+  #micBtn { flex-shrink: 0; width: 46px; height: 46px; border-radius: 50%; border: 1px solid var(--outline-variant); background: rgba(255,255,255,0.06); color: var(--on-surface-variant); font-size: 17px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform .15s, background .2s, border-color .2s, color .2s; }
+  #micBtn:active { transform: scale(0.9); }
+  #micBtn.listening { background: rgba(157,148,255,0.18); border-color: var(--primary); color: var(--primary); animation: pulse 1.3s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(157,148,255,0.4)} 50%{box-shadow:0 0 0 8px rgba(157,148,255,0)} }
+  #micBtn.hidden { display: none; }
 </style>
 </head>
 <body>
@@ -184,6 +189,7 @@
     <div class="crisis-note">elara offers emotional support, not therapy. if you're in crisis, please reach out to Tele-MANAS at 14416.</div>
     <div id="inputBar">
       <textarea id="textInput" placeholder="tell elara what's on your mind..." rows="1"></textarea>
+      <button id="micBtn" aria-label="speak">🎤</button>
       <button id="sendBtn">↑</button>
     </div>
   </div>
@@ -216,6 +222,33 @@
   const messagesEl = document.getElementById('messages');
   const textInput = document.getElementById('textInput');
   const sendBtn = document.getElementById('sendBtn');
+  const micBtn = document.getElementById('micBtn');
+
+  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let recognition = null;
+  let listening = false;
+  if (SpeechRec) {
+    recognition = new SpeechRec();
+    recognition.lang = 'en-IN';
+    recognition.interimResults = true;
+    recognition.continuous = false;
+    let baseText = '';
+    recognition.onstart = () => { listening = true; micBtn.classList.add('listening'); baseText = textInput.value ? textInput.value + ' ' : ''; };
+    recognition.onresult = (e) => {
+      let transcript = '';
+      for (let i = 0; i < e.results.length; i++) { transcript += e.results[i][0].transcript; }
+      textInput.value = baseText + transcript;
+      textInput.style.height = 'auto'; textInput.style.height = Math.min(textInput.scrollHeight, 110) + 'px';
+    };
+    recognition.onerror = () => { listening = false; micBtn.classList.remove('listening'); };
+    recognition.onend = () => { listening = false; micBtn.classList.remove('listening'); textInput.focus(); };
+    micBtn.addEventListener('click', () => {
+      if (listening) { recognition.stop(); return; }
+      try { recognition.start(); } catch(e) {}
+    });
+  } else {
+    micBtn.classList.add('hidden');
+  }
 
   let state = { name: '', birth: null, rashi: null, conversation: [] };
 
