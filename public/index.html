@@ -108,7 +108,6 @@
   #reveal .rashi-name { font-family: 'Literata', serif; font-size: 34px; font-weight: 600; margin-bottom: 6px; }
   #reveal .rashi-en { font-size: 15px; color: var(--primary); margin-bottom: 22px; }
   #reveal .rashi-note { font-size: 14px; color: var(--on-surface-variant); max-width: 300px; line-height: 1.6; margin-bottom: 34px; }
-
   #chatScreen { display: none; flex: 1; flex-direction: column; min-height: 0; }
   #messages { flex: 1; overflow-y: auto; padding: 18px 16px 12px; display: flex; flex-direction: column; gap: 12px; -webkit-overflow-scrolling: touch; }
   .msg { max-width: 84%; padding: 13px 17px; font-size: 15.5px; line-height: 1.55; animation: rise .35s ease; word-wrap: break-word; }
@@ -130,9 +129,13 @@
   #sendBtn:disabled { opacity: 0.4; cursor: not-allowed; }
   #micBtn { flex-shrink: 0; width: 46px; height: 46px; border-radius: 50%; border: 1px solid var(--outline-variant); background: rgba(255,255,255,0.06); color: var(--on-surface-variant); font-size: 17px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform .15s, background .2s, border-color .2s, color .2s; }
   #micBtn:active { transform: scale(0.9); }
-  #micBtn.listening { background: rgba(157,148,255,0.18); border-color: var(--primary); color: var(--primary); animation: pulse 1.3s ease-in-out infinite; }
-  @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(157,148,255,0.4)} 50%{box-shadow:0 0 0 8px rgba(157,148,255,0)} }
+  #micBtn.listening { background: #e0556b; border-color: #e0556b; color: #fff; font-size: 15px; animation: pulse 1.3s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(224,85,107,0.5)} 50%{box-shadow:0 0 0 9px rgba(224,85,107,0)} }
   #micBtn.hidden { display: none; }
+  #recBanner { display: none; align-items: center; justify-content: center; gap: 9px; font-size: 12.5px; color: #f0b9c2; padding: 8px 16px; }
+  #recBanner.show { display: flex; }
+  .rec-dot { width: 9px; height: 9px; border-radius: 50%; background: #e0556b; animation: recblink 1.1s ease-in-out infinite; }
+  @keyframes recblink { 0%,100%{opacity:1; transform:scale(1)} 50%{opacity:0.3; transform:scale(0.8)} }
 </style>
 </head>
 <body>
@@ -186,6 +189,7 @@
 
   <div id="chatScreen">
     <div id="messages"></div>
+    <div id="recBanner"><span class="rec-dot"></span>listening... tap the stop button when you're done</div>
     <div class="crisis-note">elara offers emotional support, not therapy. if you're in crisis, please reach out to Tele-MANAS at 14416.</div>
     <div id="inputBar">
       <textarea id="textInput" placeholder="tell elara what's on your mind..." rows="1"></textarea>
@@ -194,7 +198,6 @@
     </div>
   </div>
 </div>
-
 <script>
   const bg = document.getElementById('bg');
   for (let i = 0; i < 50; i++) {
@@ -223,31 +226,63 @@
   const textInput = document.getElementById('textInput');
   const sendBtn = document.getElementById('sendBtn');
   const micBtn = document.getElementById('micBtn');
+  const recBanner = document.getElementById('recBanner');
 
   const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
   let recognition = null;
   let listening = false;
+  let userStopped = false;
+  let finalText = '';
   if (SpeechRec) {
     recognition = new SpeechRec();
     recognition.lang = 'en-IN';
     recognition.interimResults = true;
-    recognition.continuous = false;
-    let baseText = '';
-    recognition.onstart = () => { listening = true; micBtn.classList.add('listening'); baseText = textInput.value ? textInput.value + ' ' : ''; };
+    recognition.continuous = true;
+    recognition.onstart = () => {
+      listening = true;
+      micBtn.classList.add('listening');
+      micBtn.textContent = '■';
+      recBanner.classList.add('show');
+      finalText = textInput.value ? textInput.value.trim() + ' ' : '';
+    };
     recognition.onresult = (e) => {
-      let transcript = '';
-      for (let i = 0; i < e.results.length; i++) { transcript += e.results[i][0].transcript; }
-      textInput.value = baseText + transcript;
+      let interim = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const chunk = e.results[i][0].transcript;
+        if (e.results[i].isFinal) { finalText += chunk + ' '; }
+        else { interim += chunk; }
+      }
+      textInput.value = (finalText + interim).replace(/\s+/g, ' ').trimStart();
       textInput.style.height = 'auto'; textInput.style.height = Math.min(textInput.scrollHeight, 110) + 'px';
     };
-    recognition.onerror = () => { listening = false; micBtn.classList.remove('listening'); };
-    recognition.onend = () => { listening = false; micBtn.classList.remove('listening'); textInput.focus(); };
+    recognition.onerror = (ev) => {
+      if (ev.error === 'no-speech' && !userStopped) { return; }
+      stopListeningUI();
+    };
+    recognition.onend = () => {
+      if (!userStopped) { try { recognition.start(); return; } catch(e) {} }
+      stopListeningUI();
+    };
     micBtn.addEventListener('click', () => {
-      if (listening) { recognition.stop(); return; }
-      try { recognition.start(); } catch(e) {}
+      if (listening) {
+        userStopped = true;
+        recognition.stop();
+        stopListeningUI();
+      } else {
+        userStopped = false;
+        try { recognition.start(); } catch(e) {}
+      }
     });
   } else {
     micBtn.classList.add('hidden');
+  }
+
+  function stopListeningUI() {
+    listening = false;
+    micBtn.classList.remove('listening');
+    micBtn.textContent = '🎤';
+    recBanner.classList.remove('show');
+    textInput.focus();
   }
 
   let state = { name: '', birth: null, rashi: null, conversation: [] };
